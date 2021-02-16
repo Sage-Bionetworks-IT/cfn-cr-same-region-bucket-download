@@ -6,13 +6,11 @@ import restrict_download_region.cfnresponse as cfnresponse
 from contextlib import contextmanager
 import requests
 
-MISSING_BUCKET_NAME_ERROR_MESSAGE = 'BucketName parameter is required'
-
 region = os.environ['REGION']
 bucket_name = os.environ['BUCKET_NAME']
 policy_statement_id = "DenyGetObjectForNonMatchingIp"
 # have to put in a not None value for repsonseData or error will be thrown
-custom_resource_response_data = {'Data': ''}
+empty_custom_resource_response_data = {'Data': ''}
 
 
 def handler(event, context):
@@ -32,11 +30,11 @@ def handler(event, context):
         except Exception as e:
             bucket_policy = get_empty_policy()
 
-        # Remove the old IP filtering statement if it exists
+        # filter out the previously set IP filtering policy
         bucket_policy['Statement'] = [statement for statement in bucket_policy['Statement'] if (
             policy_statement_id != statement.get("Sid"))]
 
-        # when custom_resource_request_type is None, this lambda is being triggered by the SNS topic, not the CloudFormation Custom Resource
+        # when custom_resource_request_type is None, this lambda is being triggered by an SNS topic, not the CloudFormation Custom Resource
         if not custom_resource_request_type or custom_resource_request_type.lower() == 'create' or custom_resource_request_type.lower() == 'update':
             # add new IP address policy statement
             new_ip_policy_statement = generate_ip_address_policy()
@@ -80,12 +78,11 @@ def get_empty_policy():
 @contextmanager
 def handle_custom_resource_message(event, context):
     custom_resource_request_type = event.get('RequestType')
-
     try:
         yield
         if custom_resource_request_type:
             cfnresponse.send(event, context, cfnresponse.SUCCESS,
-                             custom_resource_response_data)
+                             empty_custom_resource_response_data)
         else:
             print("was not a custom resource. No messages sent")
     except Exception as e:
@@ -93,7 +90,7 @@ def handle_custom_resource_message(event, context):
         logging.exception(e)
         if custom_resource_request_type:
             cfnresponse.send(event, context, cfnresponse.FAILED,
-                             custom_resource_response_data)
+                             empty_custom_resource_response_data)
         else:
             print("was not a custom resource. No messages sent")
         raise
