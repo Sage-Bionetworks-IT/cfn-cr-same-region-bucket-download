@@ -6,8 +6,8 @@ import restrict_download_region.cfnresponse as cfnresponse
 from contextlib import contextmanager
 import requests
 
-region = os.environ['REGION']
-bucket_name = os.environ['BUCKET_NAME']
+REGION = os.environ.get('REGION')
+BUCKET_NAME = os.environ.get('BUCKET_NAME')
 policy_statement_id = "DenyGetObjectForNonMatchingIp"
 # have to put in a not None value for repsonseData or error will be thrown
 empty_custom_resource_response_data = {'Data': ''}
@@ -19,6 +19,9 @@ def handler(event, context):
     """
     custom_resource_request_type = event.get('RequestType')
 
+    if not REGION or not BUCKET_NAME:
+        raise ValueError("REGION and BUCKET_NAME must be defined.")
+
     # context manager for the case when this lambda is triggered by aws custom resource
     with handle_custom_resource_message(event, context):
         s3_client = boto3.client('s3')
@@ -26,7 +29,7 @@ def handler(event, context):
         # get current bucket_policy from the s3 bucket
         try:
             bucket_policy = json.loads(
-                s3_client.get_bucket_policy(Bucket=bucket_name)['Policy'])
+                s3_client.get_bucket_policy(Bucket=BUCKET_NAME)['Policy'])
         except Exception as e:
             bucket_policy = get_empty_policy()
 
@@ -43,9 +46,9 @@ def handler(event, context):
         # update existing policy or delete policy completely if there are no longer any policies left
         if bucket_policy != get_empty_policy():
             s3_client.put_bucket_policy(
-                Bucket=bucket_name, Policy=json.dumps(bucket_policy))
+                Bucket=BUCKET_NAME, Policy=json.dumps(bucket_policy))
         else:
-            s3_client.delete_bucket_policy(Bucket=bucket_name)
+            s3_client.delete_bucket_policy(Bucket=BUCKET_NAME)
 
 
 def generate_ip_address_policy():
@@ -53,12 +56,12 @@ def generate_ip_address_policy():
     ip_ranges = requests.get(
         'https://ip-ranges.amazonaws.com/ip-ranges.json').json()['prefixes']
     region_ip_addresses = [item['ip_prefix'] for item in ip_ranges if (
-        item["service"] == "AMAZON" and item["region"] == region)]
+        item["service"] == "AMAZON" and item["region"] == REGION)]
     new_ip_policy_statement = {'Sid': policy_statement_id,
                                'Effect': 'Deny',
                                'Principal': '*',
                                'Action': 's3:GetObject',
-                               'Resource': 'arn:aws:s3:::'+bucket_name+'/*',
+                               'Resource': 'arn:aws:s3:::'+BUCKET_NAME+'/*',
                                'Condition': {'NotIpAddress': {'aws:SourceIp': region_ip_addresses}}}
     # allows any S3 VPC Endpoint to bypass the ip restriction.
     # cross region gateway endpoints are not supported in AWS so any S3 VPC endpoint
