@@ -7,9 +7,7 @@
    "StackId" : "arn:aws:cloudformation:us-east-2:namespace:stack/stack-name/guid",
    "PhysicalResourceId" : "custom resource provider-defined physical id",
    "ResourceProperties" : {
-      "key1" : "new-string",
-      "key2" : [ "new-list" ],
-      "key3" : { "key4" : "new-map" }
+      "BucketName": "testerino-zdong-dev"
    },
    "OldResourceProperties" : {
       "key1" : "string",

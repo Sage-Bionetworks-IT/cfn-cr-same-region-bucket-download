@@ -6,8 +6,6 @@
    "LogicalResourceId" : "name of resource in template",
    "StackId" : "arn:aws:cloudformation:us-east-2:namespace:stack/stack-name/guid",
    "ResourceProperties" : {
-      "key1" : "string",
-      "key2" : [ "list" ],
-      "key3" : { "key4" : "map" }
+      "BucketName": "testerino-zdong-dev"
    }
 }

@@ -20,11 +20,6 @@ Metadata:
     SemanticVersion: "0.0.1"
     SourceCodeUrl: "https://github.com/Sage-Bionetworks-IT/cfn-cr-same-region-bucket-download/tree/0.0.1"
 
-Parameters:
-  BucketName:
-    Type: String
-    Description: Name of the bucket to which the same region AWS resource restriction bucket policy will be applied
-
 Resources:
   RestrictBucketDownloadRegionRole:
     Type: "AWS::IAM::Role"
@@ -46,7 +41,8 @@ Resources:
                 Action:
                   - "s3:GetBucketPolicy"
                   - "s3:PutBucketPolicy"
-                Resource: !Sub "arn:aws:s3:::${BucketName}"
+                  - "s3:DeleteBucketPolicy"
+                Resource: "arn:aws:s3:::*"
         - PolicyName: PublishToCloudwatch
           PolicyDocument:
             Version: 2012-10-17
@@ -67,8 +63,23 @@ Resources:
       Timeout: 10
       Environment:
         Variables:
-          BUCKET_NAME: !Ref "BucketName"
           REGION: !Ref "AWS::Region"
+  # subscribe to SNS provided by amazon to update group policy as they update
+  # https://docs.aws.amazon.com/general/latest/gr/aws-ip-ranges.html
+  BucketGroupPolicyUpdateSNSSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: 'arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged'
+      Protocol: lambda
+      Endpoint: !GetAtt RestrictBucketDownloadRegionFunction.Arn
+  # for sns to trigger group policy update lambda
+  BucketGroupPolicyUpdateLambdaSNSInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt RestrictBucketDownloadRegionFunction.Arn
+      Action: 'lambda:InvokeFunction'
+      SourceArn: 'arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged'
+      Principal: sns.amazonaws.com
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
