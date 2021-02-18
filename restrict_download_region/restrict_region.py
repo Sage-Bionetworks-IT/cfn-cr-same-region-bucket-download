@@ -20,8 +20,6 @@ def handler(event: dict, context: dict):
     """
     # context manager for the case when this lambda is triggered by aws custom resource
     with handle_custom_resource_status_message(event, context) as custom_resource_request_type:
-        print(REGION)
-
         # when custom_resource_request_type is None, this lambda is being triggered by Amazon's SNS topic because IP prefixes have updated
         buckets_to_process = [get_bucket_name_from_custom_resouce(event)] if custom_resource_request_type is not None \
             else get_all_region_restricted_bucket_names()
