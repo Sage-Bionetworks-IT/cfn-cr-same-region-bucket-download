@@ -6,13 +6,14 @@ import json
 import restrict_download_region.cfnresponse as cfnresponse
 from contextlib import contextmanager
 import requests
+from typing import List, Dict
 
 REGION = os.environ.get('REGION')
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 POLICY_STATEMENT_ID = "DenyGetObjectForNonMatchingIp"
 
 
-def handler(event, context):
+def handler(event: dict, context: dict):
     """
     This lambda will either be triggered by a CloudFormation Custom Resource creation or by a recurring SNS topic
     """
@@ -27,12 +28,12 @@ def handler(event, context):
         # get current bucket_policy from the s3 bucket
         bucket_policy = get_bucket_policy(s3_client, BUCKET_NAME)
 
-        process_ip_restrict_policy(BUCKET_NAME, REGION, bucket_policy, event.get('RequestType'))
+        process_ip_restrict_policy(BUCKET_NAME, REGION, event.get('RequestType'), bucket_policy)
 
         update_bucket_policy(s3_client, BUCKET_NAME, bucket_policy)
 
 
-def generate_ip_address_policy(bucket_name, region):
+def generate_ip_address_policy(bucket_name: str, region: str):
     # generate new policy statement based on data from AWS
     all_ip_ranges = requests.get('https://ip-ranges.amazonaws.com/ip-ranges.json').json()
     region_ip_addresses = ip_prefixes_for_region(all_ip_ranges['prefixes'], 'ip_prefix', region) + \
@@ -51,7 +52,7 @@ def generate_ip_address_policy(bucket_name, region):
     return new_ip_policy_statement
 
 
-def get_bucket_policy(s3_client, bucket_name):
+def get_bucket_policy(s3_client, bucket_name: str):
     try:
         return json.loads(s3_client.get_bucket_policy(Bucket=bucket_name)['Policy'])
     except botocore.exceptions.ClientError as e:
@@ -65,7 +66,7 @@ def get_bucket_policy(s3_client, bucket_name):
             raise
 
 
-def process_ip_restrict_policy(bucket_name, region, custom_resource_request_type, bucket_policy):
+def process_ip_restrict_policy(bucket_name: str, region: str, custom_resource_request_type: str, bucket_policy: dict):
     """
     Modifies the passed in bucket_policy and decides whether to add or remove the IP restriciting policy
     """
@@ -81,7 +82,7 @@ def process_ip_restrict_policy(bucket_name, region, custom_resource_request_type
         bucket_policy['Statement'].append(new_ip_policy_statement)
 
 
-def update_bucket_policy(s3_client, bucket_name, bucket_policy):
+def update_bucket_policy(s3_client, bucket_name: str, bucket_policy: dict):
     # update existing policy or delete policy completely if there are no longer any policies left
     if bucket_policy['Statement']:
         s3_client.put_bucket_policy(Bucket=bucket_name, Policy=json.dumps(bucket_policy))
@@ -89,13 +90,13 @@ def update_bucket_policy(s3_client, bucket_name, bucket_policy):
         s3_client.delete_bucket_policy(Bucket=bucket_name)
 
 
-def ip_prefixes_for_region(ip_ranges, prefix_key, region):
+def ip_prefixes_for_region(ip_ranges: List[Dict], prefix_key: str, region: str):
     return [item[prefix_key] for item in ip_ranges if (
         item["service"] == "AMAZON" and item["region"] == region)]
 
 
 @contextmanager
-def handle_custom_resource_message(event, context):
+def handle_custom_resource_message(event: dict, context: dict):
     custom_resource_request_type = event.get('RequestType')
     try:
         yield

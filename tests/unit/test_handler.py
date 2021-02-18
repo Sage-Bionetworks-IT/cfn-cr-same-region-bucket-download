@@ -117,5 +117,5 @@ def test_handler__cfn_event(mocker: MockerFixture, sns_event, context):
 
     mock_handle_custom_resource_message.assert_called_once_with(sns_event, context)
     mock_get_bucket_policy.assert_called_once_with(mock_s3, bucket_name)
-    mock_process_ip_restrict_policy.assert_called_once_with(bucket_name, region, bucket_policy, None)
+    mock_process_ip_restrict_policy.assert_called_once_with(bucket_name, region, None, bucket_policy)
     mock_update_bucket_policy.assert_called_once_with(mock_s3, bucket_name, bucket_policy)
