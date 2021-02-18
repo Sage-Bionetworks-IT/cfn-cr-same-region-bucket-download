@@ -9,11 +9,11 @@ def test_handle_custom_resource_message__successful_execution__not_custom_resour
     event = {}
     context = {}
 
-    @restrict_region.handle_custom_resource_message(event, context)
     def stub_function():
         pass
 
-    stub_function()
+    with restrict_region.handle_custom_resource_message(event, context):
+        stub_function()
 
     assert not mock_cfn_send.called
 
@@ -24,12 +24,12 @@ def test_handle_custom_resource_message__failed_execution__not_custom_resource(m
     event = {""}
     context = {}
 
-    @restrict_region.handle_custom_resource_message(event, context)
     def stub_function():
         raise Exception("failed")
 
     with pytest.raises(Exception):
-        stub_function()
+        with restrict_region.handle_custom_resource_message(event, context):
+            stub_function()
 
     assert not mock_cfn_send.called
 
@@ -40,14 +40,13 @@ def test_handle_custom_resource_message__successful_execution__is_custom_resourc
     event = {"RequestType": "Create"}
     context = {}
 
-    @restrict_region.handle_custom_resource_message(event, context)
     def stub_function():
         pass
 
-    stub_function()
+    with restrict_region.handle_custom_resource_message(event, context):
+        stub_function()
 
-    mock_cfn_send.assert_called_once_with(event, context, cfnresponse.SUCCESS,
-                                          restrict_region.empty_custom_resource_response_data)
+    mock_cfn_send.assert_called_once_with(event, context, cfnresponse.SUCCESS, {"Data": ""})
 
 
 def test_handle_custom_resource_message__failed_execution__is_custom_resource(mocker: MockerFixture):
@@ -56,12 +55,11 @@ def test_handle_custom_resource_message__failed_execution__is_custom_resource(mo
     event = {"RequestType": "Create"}
     context = {}
 
-    @restrict_region.handle_custom_resource_message(event, context)
     def stub_function():
         raise Exception("failed")
 
     with pytest.raises(Exception):
-        stub_function()
+        with restrict_region.handle_custom_resource_message(event, context):
+            stub_function()
 
-    mock_cfn_send.assert_called_once_with(event, context, cfnresponse.FAILED,
-                                          restrict_region.empty_custom_resource_response_data)
+    mock_cfn_send.assert_called_once_with(event, context, cfnresponse.FAILED, {"Data": ""})
