@@ -1,11 +1,6 @@
-# lambda-template
-A GitHub template for quickly starting a new AWS lambda project.
-
-## Naming
-Naming conventions:
-* for a vanilla Lambda: `lambda-<context>`
-* for a Cloudformation Transform macro: `cfn-macro-<context>`
-* for a Cloudformation Custom Resource: `cfn-cr-<context>`
+# cfn-cr-same-region-bucket-download
+Add restriction on S3 bucket to only allow download from AWS resources in the same region.
+This function will to be periodically re-triggered by Amazon's SNS topic because the IP address ranges change.
 
 ## Development
 
@@ -23,7 +18,7 @@ the [pre-commit](https://pre-commit.com/) git hook.
 ### Create a local build
 
 ```shell script
-$ sam build
+sam build
 ```
 
 ### Run unit tests
@@ -38,8 +33,11 @@ python -m pytest tests/ -vv
 Running integration tests
 [requires docker](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-cli-command-reference-sam-local-start-api.html)
 
+**Remember to update the `"BucketName"` of the JSON with the name of the bucket you wish to test!**
+
+You may also need to include as an argument the AWS Profile  (e.g. `--profile scipooldev-admin`)
 ```shell script
-sam local invoke HelloWorldFunction --event events/event.json
+sam local invoke RestrictBucketDownloadRegionFunction --event events/create.json
 ```
 
 ## Deployment
