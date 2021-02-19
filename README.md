@@ -31,7 +31,7 @@ Tests are defined in the `tests` folder in this project. Use PIP to install the
 [pytest](https://docs.pytest.org/en/latest/) and run unit tests.
 
 ```shell script
-$ python -m pytest tests/ -v
+python -m pytest tests/ -vv
 ```
 
 ### Run integration tests
@@ -39,7 +39,7 @@ Running integration tests
 [requires docker](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-cli-command-reference-sam-local-start-api.html)
 
 ```shell script
-$ sam local invoke HelloWorldFunction --event events/event.json
+sam local invoke HelloWorldFunction --event events/event.json
 ```
 
 ## Deployment

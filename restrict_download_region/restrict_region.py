@@ -65,17 +65,20 @@ def get_bucket_name_from_custom_resouce(event: dict):
 
 
 def generate_ip_address_policy(bucket_name: str, region_ip_prefixes: List[str]):
-    new_ip_policy_statement = {'Sid': POLICY_STATEMENT_ID,
-                               'Effect': 'Deny',
-                               'Principal': '*',
-                               'Action': 's3:GetObject',
-                               'Resource': 'arn:aws:s3:::'+bucket_name+'/*',
-                               'Condition': {'NotIpAddress': {'aws:SourceIp': region_ip_prefixes}}}
-    # allows any S3 VPC Endpoint to bypass the ip restriction.
-    # cross region gateway endpoints are not supported in AWS so any S3 VPC endpoint
-    # traffic is implicitly same region.
-    new_ip_policy_statement['Condition']['Null'] = {'aws:sourceVpc': 'true'}
-    return new_ip_policy_statement
+    return {
+        'Sid': POLICY_STATEMENT_ID,
+        'Effect': 'Deny',
+        'Principal': '*',
+        'Action': 's3:GetObject',
+        'Resource': 'arn:aws:s3:::'+bucket_name+'/*',
+        'Condition': {
+            'NotIpAddress': {'aws:SourceIp': region_ip_prefixes},
+            # allows any S3 VPC Endpoint to bypass the ip restriction.
+            # cross region gateway endpoints are not supported in AWS so any S3 VPC endpoint
+            # traffic is implicitly same region.
+            'Null': {'aws:sourceVpc': 'true'}
+        }
+    }
 
 
 def get_ip_prefixes_for_region() -> List[str]:
