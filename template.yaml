@@ -32,6 +32,8 @@ Resources:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
       Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
         - PolicyName: external-bucket-lambda-policy
           PolicyDocument:
@@ -43,16 +45,6 @@ Resources:
                   - "s3:PutBucketPolicy"
                   - "s3:DeleteBucketPolicy"
                 Resource: "arn:aws:s3:::*"
-        - PolicyName: PublishToCloudwatch
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - "logs:CreateLogGroup"
-                  - "logs:CreateLogStream"
-                  - "logs:PutLogEvents"
-                Resource: "arn:aws:logs:*:*:*"
   RestrictBucketDownloadRegionFunction:
     Type: "AWS::Serverless::Function"
     Properties:
