@@ -6,8 +6,9 @@ import json
 import restrict_download_region.cfnresponse as cfnresponse
 from contextlib import contextmanager
 import requests
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 import itertools
+import traceback
 
 REGION = os.environ.get('AWS_REGION')
 POLICY_STATEMENT_ID = "DenyGetObjectForNonMatchingIp"
@@ -21,25 +22,45 @@ def handler(event: dict, context: dict):
     # context manager for the case when this lambda is triggered by aws custom resource
     with handle_custom_resource_status_message(event, context) as custom_resource_request_type:
         # when custom_resource_request_type is None, this lambda is being triggered by Amazon's SNS topic because IP prefixes have updated
-        buckets_to_process = [get_bucket_name_from_custom_resouce(event)] if custom_resource_request_type is not None \
+        is_sns_triggered = custom_resource_request_type is None
+
+        buckets_to_process = [get_bucket_name_from_custom_resouce(event)] if not is_sns_triggered \
             else get_all_region_restricted_bucket_names()
 
         region_ip_prefixes = get_ip_prefixes_for_region() if custom_resource_request_type != 'Delete' else None
 
         s3_client = boto3.client('s3')
 
+        # tuples of (bucket_name, stack_trace)
+        sns_failed_buckets: List[Tuple[str, str]] = []
+
         for bucket_name in buckets_to_process:
-            # get current bucket_policy from the s3 bucket
-            bucket_policy = get_bucket_policy(s3_client, bucket_name)
+            try:
+                # get current bucket_policy from the s3 bucket
+                bucket_policy = get_bucket_policy(s3_client, bucket_name)
 
-            # add/update/remove ip restirction policy depending on whether region_ip_prefixes
-            process_ip_restrict_policy(bucket_name, region_ip_prefixes, custom_resource_request_type, bucket_policy)
+                # add/update/remove ip restirction policy depending on whether region_ip_prefixes
+                process_ip_restrict_policy(bucket_name, region_ip_prefixes, custom_resource_request_type, bucket_policy)
 
-            # update with newly modified bucket policy
-            update_bucket_policy(s3_client, bucket_name, bucket_policy)
+                # update with newly modified bucket policy
+                update_bucket_policy(s3_client, bucket_name, bucket_policy)
+            except Exception as e:
+                if is_sns_triggered:
+                    sns_failed_buckets.append((bucket_name, traceback.format_exc()))
+                else:
+                    raise
+
+        #TODO: test
+        if sns_failed_buckets:
+            for bucket_name, stack_trace in sns_failed_buckets:
+                print("Failed Bucket: " + bucket_name + "\n Exception:\n\n")
+                print(stack_trace)
+                print("\n\n")
+            raise Exception(
+                "Some buckets' policies failed to update after Amazon's IP ranges SNS triggered this function. See log above for stack traces")
 
 
-def get_all_region_restricted_bucket_names():
+def get_all_region_restricted_bucket_names() -> List[str]:
     tagging_api = boto3.client('resourcegroupstaggingapi')
     get_resource_paginator = tagging_api.get_paginator('get_resources')
     pages = get_resource_paginator.paginate(TagFilters=[{'Key': SINGLE_REGION_BUCKET_TAG}], ResourceTypeFilters=['s3'])
@@ -55,7 +76,7 @@ def arn_to_bucket_name(arn: str):
     return arn.split(':::')[1]
 
 
-def get_bucket_name_from_custom_resouce(event: dict):
+def get_bucket_name_from_custom_resouce(event: dict) -> str:
     '''Get the bucket name from event params sent to lambda'''
     resource_properties = event.get('ResourceProperties', {})
     bucket_name = resource_properties.get('BucketName')
@@ -129,7 +150,7 @@ def update_bucket_policy(s3_client, bucket_name: str, bucket_policy: dict):
         s3_client.delete_bucket_policy(Bucket=bucket_name)
 
 
-def ip_prefixes_for_region(ip_ranges: List[Dict], prefix_key: str, region: str):
+def ip_prefixes_for_region(ip_ranges: List[Dict], prefix_key: str, region: str) -> List[str]:
     return [item[prefix_key] for item in ip_ranges if (
         item["service"] == "AMAZON" and item["region"] == region)]
 
