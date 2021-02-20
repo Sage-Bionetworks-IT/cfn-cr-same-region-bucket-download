@@ -9,7 +9,7 @@ Description: >
 Metadata:
   AWS::ServerlessRepo::Application:
     Name: "cfn-cr-same-region-bucket-download"
-    Description: "  Add restriction on S3 bucket to only allow download from AWS resources in the same region. Needs to be periodically re-triggered because the IP address change."
+    Description: "Add restriction on S3 bucket to only allow download from AWS resources in the same region. Needs to be periodically re-triggered because the IP address change."
     Author: "Sage-Bionetworks"
     SpdxLicenseId: "Apache-2.0"
     # paths are relative to .aws-sam/build directory
@@ -60,7 +60,7 @@ Resources:
       Runtime: python3.7
       Handler: "restrict_download_region/restrict_region.handler"
       Role: !GetAtt RestrictBucketDownloadRegionRole.Arn
-      Timeout: 10
+      Timeout: 30
       Environment:
         Variables:
           REGION: !Ref "AWS::Region"

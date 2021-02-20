@@ -1,6 +1,7 @@
 # cfn-cr-same-region-bucket-download
-Add restriction on S3 bucket to only allow download from AWS resources in the same region.
-This function will to be periodically re-triggered by Amazon's SNS topic because the IP address ranges change.
+Add restriction on S3 bucket to only allow download from AWS resources
+in the same region.
+This function will be automatically re-triggered by Amazon's SNS topic because the IP address ranges will periodically change.
 
 ## Development
 
@@ -52,9 +53,9 @@ which requires permissions to upload to Sage
 ```shell script
 sam package --template-file .aws-sam/build/template.yaml \
   --s3-bucket essentials-awss3lambdaartifactsbucket-x29ftznj6pqw \
-  --output-template-file .aws-sam/build/lambda-template.yaml
+  --output-template-file .aws-sam/build/cfn-cr-same-region-bucket-download-template.yaml
 
-aws s3 cp .aws-sam/build/lambda-template.yaml s3://bootstrap-awss3cloudformationbucket-19qromfd235z9/lambda-template/master/
+aws s3 cp .aws-sam/build/cfn-cr-same-region-bucket-download-template.yaml s3://bootstrap-awss3cloudformationbucket-19qromfd235z9/cfn-cr-same-region-bucket-download/master/
 ```
 
 ## Publish Lambda
@@ -64,7 +65,7 @@ Publishing the lambda makes it available in your AWS account.  It will be access
 the [serverless application repository](https://console.aws.amazon.com/serverlessrepo).
 
 ```shell script
-sam publish --template .aws-sam/build/lambda-template.yaml
+sam publish --template .aws-sam/build/cfn-cr-same-region-bucket-download-template.yaml
 ```
 
 ### Public access
@@ -81,23 +82,23 @@ aws serverlessrepo put-application-policy \
 
 ### Sceptre
 Create the following [sceptre](https://github.com/Sceptre/sceptre) file
-config/prod/lambda-template.yaml
+config/prod/cfn-cr-same-region-bucket-download-template.yaml
 
 ```yaml
-template_path: "remote/lambda-template.yaml"
-stack_name: "lambda-template"
+template_path: "remote/cfn-cr-same-region-bucket-download-template.yaml"
+stack_name: "cfn-cr-same-region-bucket-download"
 stack_tags:
   Department: "Platform"
   Project: "Infrastructure"
   OwnerEmail: "it@sagebase.org"
 hooks:
   before_launch:
-    - !cmd "curl https://bootstrap-awss3cloudformationbucket-19qromfd235z9.s3.amazonaws.com/lambda-template/master/lambda-template.yaml --create-dirs -o templates/remote/lambda-template.yaml"
+    - !cmd "curl https://bootstrap-awss3cloudformationbucket-19qromfd235z9.s3.amazonaws.com/cfn-cr-same-region-bucket-download/master/cfn-cr-same-region-bucket-download-template.yaml --create-dirs -o templates/remote/cfn-cr-same-region-bucket-download-template.yaml"
 ```
 
 Install the lambda using sceptre:
 ```shell script
-sceptre --var "profile=my-profile" --var "region=us-east-1" launch prod/lambda-template.yaml
+sceptre --var "profile=my-profile" --var "region=us-east-1" launch prod/cfn-cr-same-region-bucket-download-template.yaml
 ```
 
 ### AWS Console

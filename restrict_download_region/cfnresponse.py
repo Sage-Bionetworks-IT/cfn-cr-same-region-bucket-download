@@ -1,5 +1,7 @@
 ##############################################################################################################################################
 # The following code is from: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-lambda-function-code-cfnresponsemodule.html
+# The cfn-response module is available only when using the ZipFile property in the template.yaml, which this Lambda was previously using.
+# Now that the Lambda's code is refactored into separate a separate Python file, we must bundle it with the code.
 ##############################################################################################################################################
 
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.

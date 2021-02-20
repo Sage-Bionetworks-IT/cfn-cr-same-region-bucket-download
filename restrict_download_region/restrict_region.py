@@ -106,7 +106,7 @@ def get_bucket_policy(s3_client, bucket_name: str) -> dict:
 
 def process_ip_restrict_policy(bucket_name: str, region_ip_prefixes: List[str], custom_resource_request_type: str, bucket_policy: dict):
     """
-    Modifies the passed in bucket_policy and decides whether to add or remove the IP restriciting policy
+    Modifies the passed in bucket_policy and decides whether to add or remove the IP restriction policy
     """
     # filter out the previously set IP filtering policy
     bucket_policy['Statement'] = [statement for statement in bucket_policy['Statement']
