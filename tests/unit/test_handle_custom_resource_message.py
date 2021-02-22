@@ -30,7 +30,6 @@ def test_handle_custom_resource_status_message__failed_execution__not_custom_res
     with pytest.raises(Exception):
         with restrict_region.handle_custom_resource_status_message(event, context):
             stub_function()
-
     assert not mock_cfn_send.called
 
 
@@ -62,5 +61,4 @@ def test_handle_custom_resource_status_message__failed_execution__is_custom_reso
         with restrict_region.handle_custom_resource_status_message(event, context) as custom_resource_request_type:
             assert custom_resource_request_type == 'Create'
             stub_function()
-
-    # mock_cfn_send.assert_called_once_with(event, context, cfnresponse.FAILED, {"Data": ""})
+    mock_cfn_send.assert_called_once_with(event, context, cfnresponse.FAILED, {"Data": ""})

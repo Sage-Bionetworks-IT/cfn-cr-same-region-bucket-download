@@ -11,34 +11,38 @@ import itertools
 import traceback
 
 # AWS_REGION should always be defined in the context of a lambda
-REGION = os.environ.get('AWS_REGION')
+AWS_REGION = os.environ.get('AWS_REGION')
+BUCKET_NAME = os.environ.get('BUCKET_NAME')
+
 POLICY_STATEMENT_ID = "DenyGetObjectForNonMatchingIp"
 SINGLE_REGION_BUCKET_TAG = 'single-region-access'
 
 
 def handler(event: dict, context: dict):
     """
-    This lambda will either be triggered by a CloudFormation Custom Resource creation or by a recurring SNS topic
+    This lambda will either be triggered by a CloudFormation Custom Resource
+    creation or by a recurring SNS topic
     """
     # context manager for the case when this lambda is triggered by aws custom resource
     with handle_custom_resource_status_message(event, context) as custom_resource_request_type:
+        if not BUCKET_NAME:
+            raise ValueError("BUCKET_NAME must be defined in enviroment variables")
 
-        bucket_name = os.environ['BUCKET_NAME']
-
-        # when custom_resource_request_type is None, this lambda is being triggered by Amazon's SNS topic because IP prefixes have updated
-
-        region_ip_prefixes = get_ip_prefixes_for_region() if custom_resource_request_type != 'Delete' else None
+        region_ip_prefixes = get_ip_prefixes_for_region() \
+            if custom_resource_request_type != 'Delete'\
+            else None
 
         s3_client = boto3.client('s3')
 
         # get current bucket_policy from the s3 bucket
-        bucket_policy = get_bucket_policy(s3_client, bucket_name)
+        bucket_policy = get_bucket_policy(s3_client, BUCKET_NAME)
 
         # add/update/remove ip restirction policy depending on whether region_ip_prefixes
-        process_ip_restrict_policy(bucket_name, region_ip_prefixes, custom_resource_request_type, bucket_policy)
+        process_ip_restrict_policy(BUCKET_NAME, region_ip_prefixes,
+                                   custom_resource_request_type, bucket_policy)
 
         # update with newly modified bucket policy
-        update_bucket_policy(s3_client, bucket_name, bucket_policy)
+        update_bucket_policy(s3_client, BUCKET_NAME, bucket_policy)
 
 
 def generate_ip_address_policy(bucket_name: str, region_ip_prefixes: List[str]):
@@ -59,13 +63,13 @@ def generate_ip_address_policy(bucket_name: str, region_ip_prefixes: List[str]):
 
 
 def get_ip_prefixes_for_region() -> List[str]:
-    if not REGION:
-        raise ValueError("REGION must be defined.")
+    if not AWS_REGION:
+        raise ValueError("AWS_REGION must be defined in environment variables.")
 
     # generate new policy statement based on data from AWS
     all_ip_prefixes = requests.get('https://ip-ranges.amazonaws.com/ip-ranges.json').json()
-    return ip_prefixes_for_region(all_ip_prefixes['prefixes'], 'ip_prefix', REGION) + \
-        ip_prefixes_for_region(all_ip_prefixes['ipv6_prefixes'], 'ipv6_prefix', REGION)
+    return ip_prefixes_for_region(all_ip_prefixes['prefixes'], 'ip_prefix', AWS_REGION) + \
+        ip_prefixes_for_region(all_ip_prefixes['ipv6_prefixes'], 'ipv6_prefix', AWS_REGION)
 
 
 def get_bucket_policy(s3_client, bucket_name: str) -> dict:
@@ -81,9 +85,13 @@ def get_bucket_policy(s3_client, bucket_name: str) -> dict:
             raise
 
 
-def process_ip_restrict_policy(bucket_name: str, region_ip_prefixes: List[str], custom_resource_request_type: str, bucket_policy: dict):
+def process_ip_restrict_policy(bucket_name: str,
+                               region_ip_prefixes: List[str],
+                               custom_resource_request_type: str,
+                               bucket_policy: dict):
     """
-    Modifies the passed in bucket_policy and decides whether to add or remove the IP restriction policy
+    Modifies the passed in bucket_policy and decides whether
+    to add or remove the IP restriction policy
     """
     # filter out the previously set IP filtering policy
     bucket_policy['Statement'] = [statement for statement in bucket_policy['Statement']
@@ -116,6 +124,9 @@ def handle_custom_resource_status_message(event: dict, context: dict):
     custom_resource_request_type = event.get('RequestType')
     try:
         yield custom_resource_request_type
+
+        # when custom_resource_request_type is None, this lambda is being
+        # triggered by Amazon's SNS topic because IP prefixes have updated
         if custom_resource_request_type:
             cfnresponse.send(event, context, cfnresponse.SUCCESS, {'Data': ''})
         else:

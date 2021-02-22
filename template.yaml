@@ -4,12 +4,16 @@ Description: >
   Add restriction on S3 bucket to only allow download from AWS resources in the same region
   Needs to be periodically re-triggered because the IP address change.
   Data transfers within the same region between AWS resources are free.
-  Restricts downloading files from this bucket to only AWS resources (e.g. EC2 , Lambda) within the same region as this bucket.
-  This will not allow even the owner of the bucket to download objects in this bucket when not using an AWS resource in the same region!
+  Restricts downloading files from this bucket to only AWS resources (e.g. EC2 , Lambda)
+  within the same region as this bucket.
+  This will not allow even the owner of the bucket to download objects in this bucket
+  when not using an AWS resource in the same region!
 Metadata:
   AWS::ServerlessRepo::Application:
     Name: "cfn-cr-same-region-bucket-download"
-    Description: "Add restriction on S3 bucket to only allow download from AWS resources in the same region. Needs to be periodically re-triggered because the IP address change."
+    Description: >
+      Add restriction on S3 bucket to only allow download from AWS resources in the same region.
+      Needs to be periodically re-triggered because the IP address change.
     Author: "Sage-Bionetworks"
     SpdxLicenseId: "Apache-2.0"
     # paths are relative to .aws-sam/build directory
@@ -23,7 +27,9 @@ Metadata:
 Parameters:
   BucketName:
     Type: String
-    Description: Name of the bucket to which the same region AWS resource restriction bucket policy will be applied
+    Description: >
+      Name of the bucket to which the same region
+      AWS resource restriction bucket policy will be applied
 
 Resources:
   RestrictBucketDownloadRegionRole:
@@ -53,7 +59,9 @@ Resources:
   RestrictBucketDownloadRegionFunction:
     Type: "AWS::Serverless::Function"
     Properties:
-      Description: Dynamically updates the external bucket policy to restrict downloading only IP addresses listed by AWS.
+      Description: >
+        Dynamically updates the external bucket policy
+        to restrict downloading only IP addresses listed by AWS.
       Runtime: python3.7
       Handler: "restrict_download_region/restrict_region.handler"
       Role: !GetAtt RestrictBucketDownloadRegionRole.Arn

@@ -15,7 +15,8 @@ def test_get_bucket_policy__has_statement(mocker: MockerFixture):
             {
                 "Sid": "AddCannedAcl",
                 "Effect": "Allow",
-                "Principal": {"AWS": ["arn:aws:iam::111122223333:root", "arn:aws:iam::444455556666:root"]},
+                "Principal": {"AWS": ["arn:aws:iam::111122223333:root",
+                                      "arn:aws:iam::444455556666:root"]},
                 "Action":["s3:PutObject", "s3:PutObjectAcl"],
                 "Resource":"arn:aws:s3:::DOC-EXAMPLE-BUCKET/*",
                 "Condition":{"StringEquals": {"s3:x-amz-acl": ["public-read"]}}

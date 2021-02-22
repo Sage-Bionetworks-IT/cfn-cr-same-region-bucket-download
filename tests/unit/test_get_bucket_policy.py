@@ -15,7 +15,8 @@ def test_get_bucket_policy__s3_has_policy(mocker: MockerFixture):
             {
                 "Sid": "AddCannedAcl",
                 "Effect": "Allow",
-                "Principal": {"AWS": ["arn:aws:iam::111122223333:root", "arn:aws:iam::444455556666:root"]},
+                "Principal": {"AWS": ["arn:aws:iam::111122223333:root",
+                                      "arn:aws:iam::444455556666:root"]},
                 "Action":["s3:PutObject", "s3:PutObjectAcl"],
                 "Resource":"arn:aws:s3:::DOC-EXAMPLE-BUCKET/*",
                 "Condition":{"StringEquals": {"s3:x-amz-acl": ["public-read"]}}
@@ -36,7 +37,8 @@ def test_get_bucket_policy__s3_no_policy(mocker: MockerFixture):
                                 'Message': 'The bucket policy does not exist',
                                 'BucketName': 'some-tested-bucket'}
                       }
-    mock_s3.get_bucket_policy.side_effect = botocore.exceptions.ClientError(error_response, "GetBucketPolicy")
+    mock_s3.get_bucket_policy.side_effect = botocore.exceptions.ClientError(
+        error_response, "GetBucketPolicy")
 
     assert restrict_region.get_bucket_policy(mock_s3, "foobar") == {
         "Version": "2012-10-17",
@@ -52,7 +54,8 @@ def test_get_bucket_policy__s3_other_exception(mocker: MockerFixture):
                                 'Message': 'you got another exception',
                                 'BucketName': 'some-tested-bucket'}
                       }
-    mock_s3.get_bucket_policy.side_effect = botocore.exceptions.ClientError(error_response, "GetBucketPolicy")
+    mock_s3.get_bucket_policy.side_effect = botocore.exceptions.ClientError(
+        error_response, "GetBucketPolicy")
 
     with pytest.raises(botocore.exceptions.ClientError):
         restrict_region.get_bucket_policy(mock_s3, "foobar")

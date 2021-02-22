@@ -14,13 +14,13 @@ def test_get_ip_prefixes_for_region(mocker: MockerFixture, region, expected):
     mock_requests_get.return_value.json.return_value = json.load(
         open(pkg_resources.resource_filename(__name__, 'sample_ip_ranges.json')))
 
-    mocker.patch.object(restrict_region, 'REGION', region)
+    mocker.patch.object(restrict_region, 'AWS_REGION', region)
 
     assert restrict_region.get_ip_prefixes_for_region() == expected
 
 
 def test_get_ip_prefixes_for_region__REGION_not_set(mocker: MockerFixture):
-    mocker.patch.object(restrict_region, 'REGION', None)
+    mocker.patch.object(restrict_region, 'AWS_REGION', None)
 
     with pytest.raises(ValueError):
         restrict_region.get_ip_prefixes_for_region()
