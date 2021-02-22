@@ -10,7 +10,8 @@ from typing import List, Dict, Optional, Tuple
 import itertools
 import traceback
 
-REGION = os.environ['AWS_REGION']
+# AWS_REGION should always be defined in the context of a lambda
+REGION = os.environ.get('AWS_REGION')
 POLICY_STATEMENT_ID = "DenyGetObjectForNonMatchingIp"
 SINGLE_REGION_BUCKET_TAG = 'single-region-access'
 
