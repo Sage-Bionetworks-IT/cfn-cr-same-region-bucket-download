@@ -34,11 +34,12 @@ python -m pytest tests/ -vv
 Running integration tests
 [requires docker](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-cli-command-reference-sam-local-start-api.html)
 
-**Remember to update the `"BucketName"` of the JSON with the name of the bucket you wish to test!**
+**Remember to update the `"BucketName"` of `env_vars.json` with the name of the bucket you wish to test!**
 
+Swap out the event file in the `events/` directory. `update.json` and `create.json` should result in the same behavior. `delete.json` will remove the IP restricting policy from the bucket specified in the
 You may also need to include as an argument the AWS Profile  (e.g. `--profile scipooldev-admin`)
 ```shell script
-sam local invoke RestrictBucketDownloadRegionFunction --event events/create.json
+sam local invoke RestrictBucketDownloadRegionFunction --event events/create.json --env-vars env_vars.json
 ```
 
 ## Deployment

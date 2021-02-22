@@ -5,13 +5,5 @@
    "ResourceType" : "Custom::MyCustomResourceType",
    "LogicalResourceId" : "name of resource in template",
    "StackId" : "arn:aws:cloudformation:us-east-2:namespace:stack/stack-name/guid",
-   "PhysicalResourceId" : "custom resource provider-defined physical id",
-   "ResourceProperties" : {
-      "BucketName": "testerino-zdong-dev"
-   },
-   "OldResourceProperties" : {
-      "key1" : "string",
-      "key2" : [ "list" ],
-      "key3" : { "key4" : "map" }
-   }
+   "PhysicalResourceId" : "custom resource provider-defined physical id"
 }

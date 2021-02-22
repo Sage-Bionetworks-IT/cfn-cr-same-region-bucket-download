@@ -20,6 +20,11 @@ Metadata:
     SemanticVersion: "0.0.1"
     SourceCodeUrl: "https://github.com/Sage-Bionetworks-IT/cfn-cr-same-region-bucket-download/tree/0.0.1"
 
+Parameters:
+  BucketName:
+    Type: String
+    Description: Name of the bucket to which the same region AWS resource restriction bucket policy will be applied
+
 Resources:
   RestrictBucketDownloadRegionRole:
     Type: "AWS::IAM::Role"
@@ -55,7 +60,7 @@ Resources:
       Timeout: 30
       Environment:
         Variables:
-          REGION: !Ref "AWS::Region"
+          BUCKET_NAME: !Ref "BucketName"
   # subscribe to SNS provided by amazon to update group policy as they update
   # https://docs.aws.amazon.com/general/latest/gr/aws-ip-ranges.html
   BucketGroupPolicyUpdateSNSSubscription:
@@ -72,16 +77,3 @@ Resources:
       Action: 'lambda:InvokeFunction'
       SourceArn: 'arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged'
       Principal: sns.amazonaws.com
-
-Outputs:
-  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
-  # Find out more about other implicit resources you can reference within SAM
-  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  RestrictBucketDownloadRegionFunctionName:
-    Value: !Ref RestrictBucketDownloadRegionFunction
-    Export:
-      Name: !Sub "${AWS::Region}-${AWS::StackName}-RestrictBucketDownloadRegionFunctionName"
-  RestrictBucketDownloadRegionFunctionArn:
-    Value: !GetAtt RestrictBucketDownloadRegionFunction.Arn
-    Export:
-      Name: !Sub "${AWS::Region}-${AWS::StackName}-RestrictBucketDownloadRegionFunctionArn"

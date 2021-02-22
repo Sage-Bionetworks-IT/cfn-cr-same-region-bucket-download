@@ -4,8 +4,5 @@
    "ResponseURL" : "pre-signed-url-for-create-response",
    "ResourceType" : "Custom::MyCustomResourceType",
    "LogicalResourceId" : "name of resource in template",
-   "StackId" : "arn:aws:cloudformation:us-east-2:namespace:stack/stack-name/guid",
-   "ResourceProperties" : {
-      "BucketName": "testerino-zdong-dev"
-   }
+   "StackId" : "arn:aws:cloudformation:us-east-2:namespace:stack/stack-name/guid"
 }

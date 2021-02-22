@@ -10,7 +10,7 @@ from typing import List, Dict, Optional, Tuple
 import itertools
 import traceback
 
-REGION = os.environ.get('AWS_REGION')
+REGION = os.environ['AWS_REGION']
 POLICY_STATEMENT_ID = "DenyGetObjectForNonMatchingIp"
 SINGLE_REGION_BUCKET_TAG = 'single-region-access'
 
@@ -21,68 +21,23 @@ def handler(event: dict, context: dict):
     """
     # context manager for the case when this lambda is triggered by aws custom resource
     with handle_custom_resource_status_message(event, context) as custom_resource_request_type:
-        # when custom_resource_request_type is None, this lambda is being triggered by Amazon's SNS topic because IP prefixes have updated
-        is_sns_triggered = custom_resource_request_type is None
 
-        buckets_to_process = [get_bucket_name_from_custom_resouce(event)] if not is_sns_triggered \
-            else get_all_region_restricted_bucket_names()
+        bucket_name = os.environ['BUCKET_NAME']
+
+        # when custom_resource_request_type is None, this lambda is being triggered by Amazon's SNS topic because IP prefixes have updated
 
         region_ip_prefixes = get_ip_prefixes_for_region() if custom_resource_request_type != 'Delete' else None
 
         s3_client = boto3.client('s3')
 
-        # tuples of (bucket_name, stack_trace)
-        sns_failed_buckets: List[Tuple[str, str]] = []
+        # get current bucket_policy from the s3 bucket
+        bucket_policy = get_bucket_policy(s3_client, bucket_name)
 
-        for bucket_name in buckets_to_process:
-            try:
-                # get current bucket_policy from the s3 bucket
-                bucket_policy = get_bucket_policy(s3_client, bucket_name)
+        # add/update/remove ip restirction policy depending on whether region_ip_prefixes
+        process_ip_restrict_policy(bucket_name, region_ip_prefixes, custom_resource_request_type, bucket_policy)
 
-                # add/update/remove ip restirction policy depending on whether region_ip_prefixes
-                process_ip_restrict_policy(bucket_name, region_ip_prefixes, custom_resource_request_type, bucket_policy)
-
-                # update with newly modified bucket policy
-                update_bucket_policy(s3_client, bucket_name, bucket_policy)
-            except Exception as e:
-                if is_sns_triggered:
-                    sns_failed_buckets.append((bucket_name, traceback.format_exc()))
-                else:
-                    raise
-
-        #TODO: test
-        if sns_failed_buckets:
-            for bucket_name, stack_trace in sns_failed_buckets:
-                print("Failed Bucket: " + bucket_name + "\n Exception:\n\n")
-                print(stack_trace)
-                print("\n\n")
-            raise Exception(
-                "Some buckets' policies failed to update after Amazon's IP ranges SNS triggered this function. See log above for stack traces")
-
-
-def get_all_region_restricted_bucket_names() -> List[str]:
-    tagging_api = boto3.client('resourcegroupstaggingapi')
-    get_resource_paginator = tagging_api.get_paginator('get_resources')
-    pages = get_resource_paginator.paginate(TagFilters=[{'Key': SINGLE_REGION_BUCKET_TAG}], ResourceTypeFilters=['s3'])
-
-    # each page contains a List of S3 bucket resources in 'ResourceTagMappingList'
-    # use itertools to chain all lists together into single iterable
-    all_results = itertools.chain.from_iterable(x['ResourceTagMappingList'] for x in pages)
-    bucket_names = [arn_to_bucket_name(resource['ResourceARN']) for resource in all_results]
-    return bucket_names
-
-
-def arn_to_bucket_name(arn: str):
-    return arn.split(':::')[1]
-
-
-def get_bucket_name_from_custom_resouce(event: dict) -> str:
-    '''Get the bucket name from event params sent to lambda'''
-    resource_properties = event.get('ResourceProperties', {})
-    bucket_name = resource_properties.get('BucketName')
-    if not bucket_name:
-        raise ValueError("Bucket name is missing")
-    return bucket_name
+        # update with newly modified bucket policy
+        update_bucket_policy(s3_client, bucket_name, bucket_policy)
 
 
 def generate_ip_address_policy(bucket_name: str, region_ip_prefixes: List[str]):
