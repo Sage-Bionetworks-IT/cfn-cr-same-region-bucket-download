@@ -32,6 +32,20 @@ Parameters:
       AWS resource restriction bucket policy will be applied
 
 Resources:
+  RestrictBucketDownloadRegionPoilicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Policy allowing modification of S3 bucket policies
+      ManagedPolicyName: external-bucket-lambda-policy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "s3:GetBucketPolicy"
+              - "s3:PutBucketPolicy"
+              - "s3:DeleteBucketPolicy"
+            Resource: "arn:aws:s3:::*"
   RestrictBucketDownloadRegionRole:
     Type: "AWS::IAM::Role"
     Properties:
@@ -45,17 +59,7 @@ Resources:
       Path: "/"
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Policies:
-        - PolicyName: external-bucket-lambda-policy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - "s3:GetBucketPolicy"
-                  - "s3:PutBucketPolicy"
-                  - "s3:DeleteBucketPolicy"
-                Resource: "arn:aws:s3:::*"
+        - !Ref RestrictBucketDownloadRegionPoilicy
   RestrictBucketDownloadRegionFunction:
     Type: "AWS::Serverless::Function"
     Properties:
