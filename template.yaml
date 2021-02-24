@@ -36,7 +36,6 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: Policy allowing modification of S3 bucket policies
-      ManagedPolicyName: external-bucket-lambda-policy
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
