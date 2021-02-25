@@ -13,7 +13,6 @@ AWS_REGION = os.environ.get('AWS_REGION')
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 
 POLICY_STATEMENT_ID = "DenyGetObjectForNonMatchingIp"
-SINGLE_REGION_BUCKET_TAG = 'single-region-access'
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
