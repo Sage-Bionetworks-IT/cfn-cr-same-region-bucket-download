@@ -60,9 +60,9 @@ which requires permissions to upload to Sage
 ```shell script
 sam package --profile=admincentral-cfndeployer --template-file .aws-sam/build/template.yaml \
   --s3-bucket essentials-awss3lambdaartifactsbucket-x29ftznj6pqw \
-  --output-template-file .aws-sam/build/cfn-cr-same-region-bucket-download-template.yaml
+  --output-template-file .aws-sam/build/cfn-cr-same-region-bucket-download.yaml
 
-aws s3 cp --profile=admincentral-cfndeployer .aws-sam/build/cfn-cr-same-region-bucket-download-template.yaml s3://bootstrap-awss3cloudformationbucket-19qromfd235z9/cfn-cr-same-region-bucket-download/master/
+aws s3 cp --profile=admincentral-cfndeployer .aws-sam/build/cfn-cr-same-region-bucket-download.yaml s3://bootstrap-awss3cloudformationbucket-19qromfd235z9/cfn-cr-same-region-bucket-download/master/
 ```
 
 ## Publish Lambda
@@ -72,7 +72,7 @@ Publishing the lambda makes it available in your AWS account.  It will be access
 the [serverless application repository](https://console.aws.amazon.com/serverlessrepo).
 
 ```shell script
-sam publish --template .aws-sam/build/cfn-cr-same-region-bucket-download-template.yaml
+sam publish --template .aws-sam/build/cfn-cr-same-region-bucket-download.yaml
 ```
 
 ### Public access
@@ -89,10 +89,10 @@ aws serverlessrepo put-application-policy \
 
 ### Sceptre
 Create the following [sceptre](https://github.com/Sceptre/sceptre) file
-config/prod/cfn-cr-same-region-bucket-download-template.yaml
+config/prod/cfn-cr-same-region-bucket-download.yaml
 
 ```yaml
-template_path: "remote/cfn-cr-same-region-bucket-download-template.yaml"
+template_path: "remote/cfn-cr-same-region-bucket-download.yaml"
 stack_name: "cfn-cr-same-region-bucket-download"
 stack_tags:
   Department: "Platform"
@@ -100,12 +100,12 @@ stack_tags:
   OwnerEmail: "it@sagebase.org"
 hooks:
   before_launch:
-    - !cmd "curl https://bootstrap-awss3cloudformationbucket-19qromfd235z9.s3.amazonaws.com/cfn-cr-same-region-bucket-download/master/cfn-cr-same-region-bucket-download-template.yaml --create-dirs -o templates/remote/cfn-cr-same-region-bucket-download-template.yaml"
+    - !cmd "curl https://bootstrap-awss3cloudformationbucket-19qromfd235z9.s3.amazonaws.com/cfn-cr-same-region-bucket-download/master/cfn-cr-same-region-bucket-download.yaml --create-dirs -o templates/remote/cfn-cr-same-region-bucket-download.yaml"
 ```
 
 Install the lambda using sceptre:
 ```shell script
-sceptre --var "profile=my-profile" --var "region=us-east-1" launch prod/cfn-cr-same-region-bucket-download-template.yaml
+sceptre --var "profile=my-profile" --var "region=us-east-1" launch prod/cfn-cr-same-region-bucket-download.yaml
 ```
 
 ### AWS Console
