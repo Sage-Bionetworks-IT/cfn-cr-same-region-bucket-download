@@ -5,10 +5,8 @@ import boto3
 import json
 import restrict_download_region.cfnresponse as cfnresponse
 from contextlib import contextmanager
-import requests
-from typing import List, Dict, Optional, Tuple
-import itertools
-import traceback
+import urllib3
+from typing import List, Dict
 
 # AWS_REGION should always be defined in the context of a lambda
 AWS_REGION = os.environ.get('AWS_REGION')
@@ -67,7 +65,9 @@ def get_ip_prefixes_for_region() -> List[str]:
         raise ValueError("AWS_REGION must be defined in environment variables.")
 
     # generate new policy statement based on data from AWS
-    all_ip_prefixes = requests.get('https://ip-ranges.amazonaws.com/ip-ranges.json').json()
+    http = urllib3.PoolManager()
+    resp = http.request('GET', 'https://ip-ranges.amazonaws.com/ip-ranges.json')
+    all_ip_prefixes = json.loads(resp.data.decode('utf-8'))
     return ip_prefixes_for_region(all_ip_prefixes['prefixes'], 'ip_prefix', AWS_REGION) + \
         ip_prefixes_for_region(all_ip_prefixes['ipv6_prefixes'], 'ipv6_prefix', AWS_REGION)
 
