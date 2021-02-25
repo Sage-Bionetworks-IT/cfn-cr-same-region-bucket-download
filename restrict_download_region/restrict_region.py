@@ -15,6 +15,10 @@ BUCKET_NAME = os.environ.get('BUCKET_NAME')
 POLICY_STATEMENT_ID = "DenyGetObjectForNonMatchingIp"
 SINGLE_REGION_BUCKET_TAG = 'single-region-access'
 
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
+http = urllib3.PoolManager()
+
 
 def handler(event: dict, context: dict):
     """
@@ -26,38 +30,17 @@ def handler(event: dict, context: dict):
         if not BUCKET_NAME:
             raise ValueError("BUCKET_NAME must be defined in enviroment variables")
 
-        region_ip_prefixes = get_ip_prefixes_for_region() \
-            if custom_resource_request_type != 'Delete'\
-            else None
-
         s3_client = boto3.client('s3')
 
         # get current bucket_policy from the s3 bucket
         bucket_policy = get_bucket_policy(s3_client, BUCKET_NAME)
 
-        # add/update/remove ip restirction policy depending on whether region_ip_prefixes
-        process_ip_restrict_policy(BUCKET_NAME, region_ip_prefixes,
+        # add/update/remove ip restirction policy depending on the region_ip_prefixes
+        process_ip_restrict_policy(BUCKET_NAME,
                                    custom_resource_request_type, bucket_policy)
 
         # update with newly modified bucket policy
         update_bucket_policy(s3_client, BUCKET_NAME, bucket_policy)
-
-
-def generate_ip_address_policy(bucket_name: str, region_ip_prefixes: List[str]):
-    return {
-        'Sid': POLICY_STATEMENT_ID,
-        'Effect': 'Deny',
-        'Principal': '*',
-        'Action': 's3:GetObject',
-        'Resource': 'arn:aws:s3:::'+bucket_name+'/*',
-        'Condition': {
-            'NotIpAddress': {'aws:SourceIp': region_ip_prefixes},
-            # allows any S3 VPC Endpoint to bypass the ip restriction.
-            # cross region gateway endpoints are not supported in AWS so any S3 VPC endpoint
-            # traffic is implicitly same region.
-            'Null': {'aws:sourceVpc': 'true'}
-        }
-    }
 
 
 def get_ip_prefixes_for_region() -> List[str]:
@@ -65,7 +48,6 @@ def get_ip_prefixes_for_region() -> List[str]:
         raise ValueError("AWS_REGION must be defined in environment variables.")
 
     # generate new policy statement based on data from AWS
-    http = urllib3.PoolManager()
     resp = http.request('GET', 'https://ip-ranges.amazonaws.com/ip-ranges.json')
     all_ip_prefixes = json.loads(resp.data.decode('utf-8'))
     return ip_prefixes_for_region(all_ip_prefixes['prefixes'], 'ip_prefix', AWS_REGION) + \
@@ -86,7 +68,6 @@ def get_bucket_policy(s3_client, bucket_name: str) -> dict:
 
 
 def process_ip_restrict_policy(bucket_name: str,
-                               region_ip_prefixes: List[str],
                                custom_resource_request_type: str,
                                bucket_policy: dict):
     """
@@ -102,8 +83,26 @@ def process_ip_restrict_policy(bucket_name: str,
         return
 
     # add new IP address policy statement
+    region_ip_prefixes = get_ip_prefixes_for_region()
     new_ip_policy_statement = generate_ip_address_policy(bucket_name, region_ip_prefixes)
     bucket_policy['Statement'].append(new_ip_policy_statement)
+
+
+def generate_ip_address_policy(bucket_name: str, region_ip_prefixes: List[str]):
+    return {
+        'Sid': POLICY_STATEMENT_ID,
+        'Effect': 'Deny',
+        'Principal': '*',
+        'Action': 's3:GetObject',
+        'Resource': 'arn:aws:s3:::'+bucket_name+'/*',
+        'Condition': {
+            'NotIpAddress': {'aws:SourceIp': region_ip_prefixes},
+            # allows any S3 VPC Endpoint to bypass the ip restriction.
+            # cross region gateway endpoints are not supported in AWS so any S3 VPC endpoint
+            # traffic is implicitly same region.
+            'Null': {'aws:sourceVpc': 'true'}
+        }
+    }
 
 
 def update_bucket_policy(s3_client, bucket_name: str, bucket_policy: dict):
@@ -130,12 +129,11 @@ def handle_custom_resource_status_message(event: dict, context: dict):
         if custom_resource_request_type:
             cfnresponse.send(event, context, cfnresponse.SUCCESS, {'Data': ''})
         else:
-            print("was not a custom resource. No messages sent")
+            log.debug("was not a custom resource. No messages sent")
     except Exception as e:
-        print("\n\n")
-        logging.exception(e)
+        log.exception(e)
         if custom_resource_request_type:
             cfnresponse.send(event, context, cfnresponse.FAILED, {'Data': ''})
         else:
-            print("was not a custom resource. No messages sent")
+            log.debug("was not a custom resource. No messages sent")
         raise

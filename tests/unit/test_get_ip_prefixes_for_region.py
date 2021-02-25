@@ -10,8 +10,7 @@ import pkg_resources
     ('us-east-1', ['15.230.56.104/31', '2600:1f19:8000::/36']),
     ('eu-west-2', ['52.93.153.170/32', '2a05:d07a:c000::/40'])])
 def test_get_ip_prefixes_for_region(mocker: MockerFixture, region, expected):
-    mock_urllib3_PoolManager = mocker.patch.object(urllib3, "PoolManager", autospec=True)
-    mock_http = mock_urllib3_PoolManager.return_value
+    mock_http = mocker.patch.object(restrict_region, "http", autospec=True)
 
     mock_http.request.return_value.data.decode.return_value = json.dumps(json.load(
         open(pkg_resources.resource_filename(__name__, 'sample_ip_ranges.json'))))

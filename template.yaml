@@ -19,7 +19,7 @@ Metadata:
     # paths are relative to .aws-sam/build directory
     LicenseUrl: "LICENSE"
     ReadmeUrl: "README.md"
-    Labels: ["serverless", "template", "github", "quick-start"]
+    Labels: ["s3", "buckets", "region-restriction"]
     HomePageUrl: "https://github.com/Sage-Bionetworks-IT/cfn-cr-same-region-bucket-download"
     SemanticVersion: "0.0.1"
     SourceCodeUrl: "https://github.com/Sage-Bionetworks-IT/cfn-cr-same-region-bucket-download/tree/0.0.1"
