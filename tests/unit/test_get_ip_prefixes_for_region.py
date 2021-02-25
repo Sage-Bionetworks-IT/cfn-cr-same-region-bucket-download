@@ -1,7 +1,7 @@
 from pytest_mock import MockerFixture
 import restrict_download_region.restrict_region as restrict_region
 import pytest
-import requests
+import urllib3
 import json
 import pkg_resources
 
@@ -10,9 +10,11 @@ import pkg_resources
     ('us-east-1', ['15.230.56.104/31', '2600:1f19:8000::/36']),
     ('eu-west-2', ['52.93.153.170/32', '2a05:d07a:c000::/40'])])
 def test_get_ip_prefixes_for_region(mocker: MockerFixture, region, expected):
-    mock_requests_get = mocker.patch.object(requests, "get", autospec=True)
-    mock_requests_get.return_value.json.return_value = json.load(
-        open(pkg_resources.resource_filename(__name__, 'sample_ip_ranges.json')))
+    mock_urllib3_PoolManager = mocker.patch.object(urllib3, "PoolManager", autospec=True)
+    mock_http = mock_urllib3_PoolManager.return_value
+
+    mock_http.request.return_value.data.decode.return_value = json.dumps(json.load(
+        open(pkg_resources.resource_filename(__name__, 'sample_ip_ranges.json'))))
 
     mocker.patch.object(restrict_region, 'AWS_REGION', region)
 
