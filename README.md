@@ -3,6 +3,12 @@ Add restriction on S3 bucket to only allow download from AWS resources
 in the same region.
 This function will be automatically re-triggered by Amazon's SNS topic because the IP address ranges will periodically change.
 
+### Important Implementation Detail
+This Lambda is being used as a AWS Custom Resource, but it is **not a singleton Lambda** that gets reused to process each Custom Resource request. Each provision **S3 bucket will need to create it's own dedicated instance** of this Lambda because the SNS event of Amazon's constantly updating IP ranges is does not include any information about the bucket to change, so we can not rely on only Custom Resource event handling. An alternative implementation would be to have a single Lambda on each SNS update from Amazon handle policy updates for every region-restricted bucket, but this apporach would introduces more complexity if any off the policy updates fail.
+
+
+
+
 ## Development
 
 ### Contributions

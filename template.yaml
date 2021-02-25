@@ -88,3 +88,7 @@ Resources:
       Action: 'lambda:InvokeFunction'
       SourceArn: 'arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged'
       Principal: sns.amazonaws.com
+  RestrictBucketDownloadRegionCustomResource:
+    Type: Custom::RestrictBucketDownloadRegion
+    Properties:
+      ServiceToken: !GetAtt RestrictBucketDownloadRegionFunction.Arn
