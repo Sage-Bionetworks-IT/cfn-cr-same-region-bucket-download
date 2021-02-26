@@ -1,73 +1,156 @@
+import restrict_download_region.restrict_region as restrict_region
 import json
-
 import pytest
+import boto3
+from pytest_mock import MockerFixture
+from botocore.stub import Stubber
 
-from hello_world import app
 
-
-@pytest.fixture()
-def apigw_event():
-    """ Generates API GW Event"""
-
+@pytest.fixture
+def bucket_policy():
     return {
-        "body": '{ "test": "body"}',
-        "resource": "/{proxy+}",
-        "requestContext": {
-            "resourceId": "123456",
-            "apiId": "1234567890",
-            "resourcePath": "/{proxy+}",
-            "httpMethod": "POST",
-            "requestId": "c6af9ac6-7b61-11e6-9a41-93e8deadbeef",
-            "accountId": "123456789012",
-            "identity": {
-                "apiKey": "",
-                "userArn": "",
-                "cognitoAuthenticationType": "",
-                "caller": "",
-                "userAgent": "Custom User Agent String",
-                "user": "",
-                "cognitoIdentityPoolId": "",
-                "cognitoIdentityId": "",
-                "cognitoAuthenticationProvider": "",
-                "sourceIp": "127.0.0.1",
-                "accountId": "",
-            },
-            "stage": "prod",
-        },
-        "queryStringParameters": {"foo": "bar"},
-        "headers": {
-            "Via": "1.1 08f323deadbeefa7af34d5feb414ce27.cloudfront.net (CloudFront)",
-            "Accept-Language": "en-US,en;q=0.8",
-            "CloudFront-Is-Desktop-Viewer": "true",
-            "CloudFront-Is-SmartTV-Viewer": "false",
-            "CloudFront-Is-Mobile-Viewer": "false",
-            "X-Forwarded-For": "127.0.0.1, 127.0.0.2",
-            "CloudFront-Viewer-Country": "US",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Upgrade-Insecure-Requests": "1",
-            "X-Forwarded-Port": "443",
-            "Host": "1234567890.execute-api.us-east-1.amazonaws.com",
-            "X-Forwarded-Proto": "https",
-            "X-Amz-Cf-Id": "aaaaaaaaaae3VYQb9jd-nvCd-de396Uhbp027Y2JvkCPNLmGJHqlaA==",
-            "CloudFront-Is-Tablet-Viewer": "false",
-            "Cache-Control": "max-age=0",
-            "User-Agent": "Custom User Agent String",
-            "CloudFront-Forwarded-Proto": "https",
-            "Accept-Encoding": "gzip, deflate, sdch",
-        },
-        "pathParameters": {"proxy": "/examplepath"},
-        "httpMethod": "POST",
-        "stageVariables": {"baz": "qux"},
-        "path": "/examplepath",
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "id": "foobar"
+            }
+        ]
     }
 
 
-def test_lambda_handler(apigw_event, mocker):
+@pytest.fixture
+def context():
+    # we don't care what's in this object
+    return {}
 
-    ret = app.lambda_handler(apigw_event, "")
-    data = json.loads(ret["body"])
 
-    assert ret["statusCode"] == 200
-    assert "message" in ret["body"]
-    assert data["message"] == "hello world"
-    # assert "location" in data.dict_keys()
+@pytest.mark.parametrize("cfn_request_type", ["Create", "Update"])
+def test_handler__cfn_create_and_update_events(mocker: MockerFixture,
+                                               cfn_request_type,
+                                               context,
+                                               bucket_policy):
+
+    cfn_event = {
+        "RequestType": cfn_request_type,
+        "ResponseURL": "pre-signed-url-for-create-response"
+    }
+
+    bucket_name = "my-bucket-name"
+    region = "us-east-1"
+    mocker.patch.object(restrict_region, "AWS_REGION", region)
+    mocker.patch.object(restrict_region, "BUCKET_NAME", bucket_name)
+
+    mock_s3 = mocker.MagicMock(boto3.client('s3'))
+    mocker.patch.object(boto3, "client", autospec=True).return_value = mock_s3
+
+    mock_handle_custom_resource_message = mocker.patch.object(
+        restrict_region, "handle_custom_resource_status_message", autospec=True)
+    mock_handle_custom_resource_message.return_value.__enter__.return_value = cfn_event.get(
+        'RequestType')
+
+    mock_get_bucket_policy = mocker.patch.object(
+        restrict_region, "get_bucket_policy", return_value=bucket_policy, autospec=True)
+    mock_process_ip_restrict_policy = mocker.patch.object(
+        restrict_region, "process_ip_restrict_policy", autospec=True)
+    mock_update_bucket_policy = mocker.patch.object(
+        restrict_region, "update_bucket_policy", autospec=True)
+
+    # function under test
+    restrict_region.handler(cfn_event, context)
+
+    mock_handle_custom_resource_message.assert_called_once_with(cfn_event, context)
+    mock_get_bucket_policy.assert_called_once_with(mock_s3, bucket_name)
+    mock_process_ip_restrict_policy.assert_called_once_with(
+        bucket_name, cfn_request_type, bucket_policy)
+    mock_update_bucket_policy.assert_called_once_with(mock_s3, bucket_name, bucket_policy)
+
+
+def test_handler__cfn_delete_event(mocker: MockerFixture, context, bucket_policy):
+    delete_event = {
+        "RequestType": "Delete",
+        "ResponseURL": "pre-signed-url-for-create-response"
+    }
+
+    bucket_name = "my-bucket-name"
+    region = "us-east-1"
+    mocker.patch.object(restrict_region, "AWS_REGION", region)
+    mocker.patch.object(restrict_region, "BUCKET_NAME", bucket_name)
+
+    bucket_policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "id": "foobar"
+            }
+        ]
+    }
+
+    mock_s3 = mocker.MagicMock(boto3.client('s3'))
+    mocker.patch.object(boto3, "client", autospec=True).return_value = mock_s3
+
+    mock_handle_custom_resource_message = mocker.patch.object(
+        restrict_region, "handle_custom_resource_status_message", autospec=True)
+    mock_handle_custom_resource_message.return_value.__enter__.return_value = delete_event.get(
+        'RequestType')
+
+    mock_get_bucket_policy = mocker.patch.object(
+        restrict_region, "get_bucket_policy", return_value=bucket_policy, autospec=True)
+    mock_process_ip_restrict_policy = mocker.patch.object(
+        restrict_region, "process_ip_restrict_policy", autospec=True)
+    mock_update_bucket_policy = mocker.patch.object(
+        restrict_region, "update_bucket_policy", autospec=True)
+
+    # function under test
+    restrict_region.handler(delete_event, context)
+
+    mock_handle_custom_resource_message.assert_called_once_with(delete_event, context)
+    mock_get_bucket_policy.assert_called_once_with(mock_s3, bucket_name)
+    mock_process_ip_restrict_policy.assert_called_once_with(
+        bucket_name, "Delete", bucket_policy)
+    mock_update_bucket_policy.assert_called_once_with(mock_s3, bucket_name, bucket_policy)
+
+
+def test_handler__sns_event(mocker: MockerFixture, context, bucket_policy):
+
+    sns_event = {
+        "Records": [
+            {
+                "EventVersion": "1.0",
+                "EventSubscriptionArn": "arn:aws:sns:us-east-2:123456789012:sns-lambda:21be56ed-a058-49f5-8c98-aedd2564c486",
+                "EventSource": "aws:sns",
+                # we don't actually care what's in the sns message
+                "Sns": {}
+            }
+        ]
+    }
+
+    region = "us-east-1"
+    bucket_name = "my-bucket-name"
+    mocker.patch.object(restrict_region, "AWS_REGION", region)
+    mocker.patch.object(restrict_region, "BUCKET_NAME", bucket_name)
+
+    mock_s3 = mocker.MagicMock(boto3.client('s3'))
+    mocker.patch.object(boto3, "client", autospec=True).return_value = mock_s3
+
+    mock_handle_custom_resource_message = mocker.patch.object(
+        restrict_region, "handle_custom_resource_status_message", autospec=True)
+    mock_handle_custom_resource_message.return_value.__enter__.return_value = sns_event.get(
+        'RequestType')
+
+    mock_get_bucket_policy = mocker.patch.object(
+        restrict_region, "get_bucket_policy", return_value=bucket_policy, autospec=True)
+    mock_process_ip_restrict_policy = mocker.patch.object(
+        restrict_region, "process_ip_restrict_policy", autospec=True)
+    mock_update_bucket_policy = mocker.patch.object(
+        restrict_region, "update_bucket_policy", autospec=True)
+
+    # function under test
+    restrict_region.handler(sns_event, context)
+
+    mock_handle_custom_resource_message.assert_called_once_with(sns_event, context)
+
+    # there should be 2 calls for each function since we found 2 buckets
+    mock_get_bucket_policy.assert_called_once_with(mock_s3, bucket_name)
+    mock_process_ip_restrict_policy.assert_called_once_with(
+        bucket_name, None, bucket_policy)
+    mock_update_bucket_policy.assert_called_once_with(mock_s3, bucket_name, bucket_policy)

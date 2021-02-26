@@ -1,67 +1,94 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Hello World lambda
-
+  Add restriction on S3 bucket to only allow download from AWS resources in the same region
+  Needs to be periodically re-triggered because the IP address change.
+  Data transfers within the same region between AWS resources are free.
+  Restricts downloading files from this bucket to only AWS resources (e.g. EC2 , Lambda)
+  within the same region as this bucket.
+  This will not allow even the owner of the bucket to download objects in this bucket
+  when not using an AWS resource in the same region!
 Metadata:
   AWS::ServerlessRepo::Application:
-    Name: "lambda-template"
-    Description: "A GH template for quickly starting a new AWS lambda project."
+    Name: "cfn-cr-same-region-bucket-download"
+    Description: >
+      Add restriction on S3 bucket to only allow download from AWS resources in the same region.
+      Needs to be periodically re-triggered because the IP address change.
     Author: "Sage-Bionetworks"
     SpdxLicenseId: "Apache-2.0"
     # paths are relative to .aws-sam/build directory
     LicenseUrl: "LICENSE"
     ReadmeUrl: "README.md"
-    Labels: ["serverless", "template", "github", "quick-start"]
-    HomePageUrl: "https://github.com/Sage-Bionetworks-IT/lambda-template"
-    SemanticVersion: "0.0.3"
-    SourceCodeUrl: "https://github.com/Sage-Bionetworks-IT/lambda-template/tree/0.0.3"
+    Labels: ["s3", "buckets", "region-restriction"]
+    HomePageUrl: "https://github.com/Sage-Bionetworks-IT/cfn-cr-same-region-bucket-download"
+    SemanticVersion: "0.0.1"
+    SourceCodeUrl: "https://github.com/Sage-Bionetworks-IT/cfn-cr-same-region-bucket-download/tree/0.0.1"
 
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
-Globals:
-  Function:
-    Timeout: 3
+Parameters:
+  BucketName:
+    Type: String
+    Description: >
+      Name of the bucket to which the same region
+      AWS resource restriction bucket policy will be applied
 
 Resources:
-  HelloWorldFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+  RestrictBucketDownloadRegionPoilicy:
+    Type: AWS::IAM::ManagedPolicy
     Properties:
-      CodeUri: .
-      Handler: hello_world/app.lambda_handler
-      Runtime: python3.7
-      Role: !GetAtt FunctionRole.Arn
-      Events:
-        HelloWorld:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
-          Properties:
-            Path: /hello
-            Method: get
-
-  FunctionRole:   # execute lambda function with this role
-    Type: AWS::IAM::Role
+      Description: Policy allowing modification of S3 bucket policies
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "s3:GetBucketPolicy"
+              - "s3:PutBucketPolicy"
+              - "s3:DeleteBucketPolicy"
+            Resource: !Sub "arn:aws:s3:::${BucketName}"
+  RestrictBucketDownloadRegionRole:
+    Type: "AWS::IAM::Role"
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - sts:AssumeRole
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: "/"
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-
-Outputs:
-  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
-  # Find out more about other implicit resources you can reference within SAM
-  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  HelloWorldApi:
-    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  HelloWorldFunctionArn:
-    Description: "Hello World Lambda Function ARN"
-    Value: !GetAtt HelloWorldFunction.Arn
-  HelloWorldFunctionRoleArn:
-    Description: "Implicit IAM Role created for Hello World function"
-    Value: !GetAtt FunctionRole.Arn
+        - !Ref RestrictBucketDownloadRegionPoilicy
+  RestrictBucketDownloadRegionFunction:
+    Type: "AWS::Serverless::Function"
+    Properties:
+      Description: >
+        Dynamically updates the external bucket policy
+        to restrict downloading only IP addresses listed by AWS.
+      Runtime: python3.7
+      Handler: "restrict_download_region/restrict_region.handler"
+      Role: !GetAtt RestrictBucketDownloadRegionRole.Arn
+      Timeout: 30
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref "BucketName"
+  # subscribe to SNS provided by amazon to update group policy as they update
+  # https://docs.aws.amazon.com/general/latest/gr/aws-ip-ranges.html
+  BucketGroupPolicyUpdateSNSSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: 'arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged'
+      Protocol: lambda
+      Endpoint: !GetAtt RestrictBucketDownloadRegionFunction.Arn
+  # for sns to trigger group policy update lambda
+  BucketGroupPolicyUpdateLambdaSNSInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt RestrictBucketDownloadRegionFunction.Arn
+      Action: 'lambda:InvokeFunction'
+      SourceArn: 'arn:aws:sns:us-east-1:806199016981:AmazonIpSpaceChanged'
+      Principal: sns.amazonaws.com
+  RestrictBucketDownloadRegionCustomResource:
+    Type: Custom::RestrictBucketDownloadRegion
+    Properties:
+      ServiceToken: !GetAtt RestrictBucketDownloadRegionFunction.Arn

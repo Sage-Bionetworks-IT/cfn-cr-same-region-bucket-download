@@ -1,0 +1,5 @@
+{
+  "RestrictBucketDownloadRegionFunction": {
+    "BUCKET_NAME": "testerino-zdong-dev"
+  }
+}

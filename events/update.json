@@ -1,0 +1,9 @@
+{
+   "RequestType" : "Update",
+   "RequestId" : "unique id for this update request",
+   "ResponseURL" : "pre-signed-url-for-update-response",
+   "ResourceType" : "Custom::MyCustomResourceType",
+   "LogicalResourceId" : "name of resource in template",
+   "StackId" : "arn:aws:cloudformation:us-east-2:namespace:stack/stack-name/guid",
+   "PhysicalResourceId" : "custom resource provider-defined physical id"
+}
