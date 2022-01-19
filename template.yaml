@@ -8,21 +8,6 @@ Description: >
   within the same region as this bucket.
   This will not allow even the owner of the bucket to download objects in this bucket
   when not using an AWS resource in the same region!
-Metadata:
-  AWS::ServerlessRepo::Application:
-    Name: "cfn-cr-same-region-bucket-download"
-    Description: >
-      Add restriction on S3 bucket to only allow download from AWS resources in the same region.
-      Needs to be periodically re-triggered because the IP address change.
-    Author: "Sage-Bionetworks"
-    SpdxLicenseId: "Apache-2.0"
-    # paths are relative to .aws-sam/build directory
-    LicenseUrl: "LICENSE"
-    ReadmeUrl: "README.md"
-    Labels: ["s3", "buckets", "region-restriction"]
-    HomePageUrl: "https://github.com/Sage-Bionetworks-IT/cfn-cr-same-region-bucket-download"
-    SemanticVersion: "0.0.1"
-    SourceCodeUrl: "https://github.com/Sage-Bionetworks-IT/cfn-cr-same-region-bucket-download/tree/0.0.1"
 
 Parameters:
   BucketName:
