@@ -133,3 +133,6 @@ dmypy.json
 
 # AWS
 .aws-sam/
+
+# generated dynamically from Pipfile
+requirements.txt
