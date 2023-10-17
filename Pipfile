@@ -10,7 +10,6 @@ pre-commit = "~=2.15"
 aws-sam-cli = "~=1.35"
 awscli = "~=1.22"
 coverage = "~=7.0"
-autopep8 = "*"
 
 [requires]
 python_version = "3.9"
