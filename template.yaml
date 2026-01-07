@@ -50,7 +50,7 @@ Resources:
       Description: >
         Dynamically updates the external bucket policy
         to restrict downloading only IP addresses listed by AWS.
-      Runtime: python3.9
+      Runtime: python3.13
       CodeUri: .
       Handler: "restrict_download_region/restrict_region.handler"
       Role: !GetAtt RestrictBucketDownloadRegionRole.Arn
