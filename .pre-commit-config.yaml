@@ -1,5 +1,7 @@
 ci:
   autoupdate_schedule: monthly
+default_language_version:
+  python: python3.13
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -19,7 +21,7 @@ repos:
     hooks:
       - id: yamllint
   - repo: https://github.com/awslabs/cfn-python-lint
-    rev: v1.48.1
+    rev: v1.49.3
     hooks:
       - id: cfn-python-lint
         files: template\.(json|yml|yaml)$

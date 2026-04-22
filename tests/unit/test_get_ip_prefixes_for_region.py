@@ -1,9 +1,9 @@
+from pathlib import Path
 from pytest_mock import MockerFixture
 import restrict_download_region.restrict_region as restrict_region
 import pytest
 import urllib3
 import json
-import pkg_resources
 
 
 @pytest.mark.parametrize("region, expected", [
@@ -13,7 +13,7 @@ def test_get_ip_prefixes_for_region(mocker: MockerFixture, region, expected):
     mock_http = mocker.patch.object(restrict_region, "http", autospec=True)
 
     mock_http.request.return_value.data.decode.return_value = json.dumps(json.load(
-        open(pkg_resources.resource_filename(__name__, 'sample_ip_ranges.json'))))
+        open(Path(__file__).parent / 'sample_ip_ranges.json')))
 
     mocker.patch.object(restrict_region, 'AWS_REGION', region)
 
