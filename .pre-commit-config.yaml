@@ -21,7 +21,7 @@ repos:
     hooks:
       - id: yamllint
   - repo: https://github.com/awslabs/cfn-python-lint
-    rev: v1.50.1
+    rev: v1.51.0
     hooks:
       - id: cfn-python-lint
         files: template\.(json|yml|yaml)$
