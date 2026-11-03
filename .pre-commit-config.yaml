@@ -1,5 +1,7 @@
 ci:
   autoupdate_schedule: monthly
+  skip:
+    - cfn-python-lint  # https://github.com/aws-cloudformation/cfn-lint/issues/4579
 default_language_version:
   python: python3.13
 repos:
